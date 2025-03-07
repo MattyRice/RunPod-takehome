@@ -1,0 +1,4 @@
+runpod
+transformers
+torch
+pillow 
