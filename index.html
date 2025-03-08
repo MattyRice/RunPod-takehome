@@ -501,6 +501,72 @@
             document.getElementById('generateBtn').disabled = false;
             document.getElementById('loading').style.display = 'none';
         }
+
+        // Add this function to start cycling through quirky messages
+        function startQuirkyMessages() {
+            // Clear any existing intervals
+            if (messageInterval) clearInterval(messageInterval);
+            if (longWaitTimeout) clearTimeout(longWaitTimeout);
+            
+            const statusElement = document.getElementById('status');
+            
+            // Show first message immediately
+            statusElement.textContent = loadingMessages[0];
+            statusElement.style.animation = 'none';
+            void statusElement.offsetWidth; // Trigger reflow
+            statusElement.style.animation = 'fadeInOut 4s ease-in-out';
+            
+            messageIndex = 1;
+            
+            // Change message every 4 seconds with fade animation
+            messageInterval = setInterval(() => {
+                // Reset animation
+                statusElement.style.animation = 'none';
+                void statusElement.offsetWidth; // Trigger reflow
+                statusElement.style.animation = 'fadeInOut 4s ease-in-out';
+                
+                // Update message
+                if (messageIndex < loadingMessages.length) {
+                    statusElement.textContent = loadingMessages[messageIndex];
+                    messageIndex++;
+                } else {
+                    // Start cycling through messages again
+                    messageIndex = 0;
+                    statusElement.textContent = loadingMessages[messageIndex];
+                    messageIndex++;
+                }
+            }, 4000);
+            
+            // After 20 seconds, start showing "taking longer than usual" messages
+            longWaitTimeout = setTimeout(() => {
+                clearInterval(messageInterval);
+                
+                // Show first long wait message
+                statusElement.textContent = longWaitMessages[0];
+                statusElement.style.animation = 'none';
+                void statusElement.offsetWidth; // Trigger reflow
+                statusElement.style.animation = 'fadeInOut 6s ease-in-out';
+                
+                let longWaitIndex = 1;
+                
+                // Cycle through long wait messages
+                messageInterval = setInterval(() => {
+                    // Reset animation
+                    statusElement.style.animation = 'none';
+                    void statusElement.offsetWidth; // Trigger reflow
+                    statusElement.style.animation = 'fadeInOut 6s ease-in-out';
+                    
+                    if (longWaitIndex < longWaitMessages.length) {
+                        statusElement.textContent = longWaitMessages[longWaitIndex];
+                        longWaitIndex++;
+                    } else {
+                        longWaitIndex = 0;
+                        statusElement.textContent = longWaitMessages[longWaitIndex];
+                        longWaitIndex++;
+                    }
+                }, 6000);
+            }, 20000);
+        }
     </script>
 </body>
 </html>
