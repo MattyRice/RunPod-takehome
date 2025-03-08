@@ -359,4 +359,48 @@ img {
 textarea {
     width: 100%;
     resize: vertical;
+}
+
+/* Add these styles for the result image display */
+.result-image-container {
+    display: flex;
+    justify-content: center;
+    margin: 20px 0;
+    max-height: 70vh;
+    overflow: hidden;
+}
+
+.result-image {
+    max-width: 100%;
+    max-height: 70vh;
+    object-fit: contain;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.download-button {
+    display: inline-block;
+    margin-top: 15px;
+    padding: 10px 15px;
+    background-color: #4CAF50;
+    color: white;
+    border-radius: 5px;
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.prompt-display {
+    margin-top: 15px;
+    padding: 10px;
+    background-color: #f8f9fa;
+    border-radius: 5px;
+    text-align: left;
+    max-width: 100%;
+    overflow-wrap: break-word;
+}
+
+.new-image-button {
+    margin-top: 20px;
+    padding: 12px 20px;
+    font-weight: bold;
 } 

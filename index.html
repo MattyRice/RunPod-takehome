@@ -268,38 +268,35 @@
             // Hide history when showing a full image
             toggleHistoryVisibility(false);
             
-            // Create image element
+            // Create image container for better control
+            const imageContainer = document.createElement('div');
+            imageContainer.className = 'result-image-container';
+            resultDiv.appendChild(imageContainer);
+            
+            // Create image element with controlled size
             const img = document.createElement('img');
             img.src = `data:image/png;base64,${fullImageData}`;
-            img.style.maxWidth = '100%';
-            img.style.borderRadius = '8px';
-            img.style.boxShadow = '0 4px 8px rgba(0, 0, 0, 0.1)';
-            resultDiv.appendChild(img);
+            img.className = 'result-image';
+            imageContainer.appendChild(img);
             
             // Add download button
             const downloadBtn = document.createElement('a');
             downloadBtn.innerHTML = 'Download Image';
             downloadBtn.href = img.src;
             downloadBtn.download = 'generated-image.png';
-            downloadBtn.style.display = 'inline-block';
-            downloadBtn.style.marginTop = '15px';
-            downloadBtn.style.padding = '10px 15px';
-            downloadBtn.style.backgroundColor = '#4CAF50';
-            downloadBtn.style.color = 'white';
-            downloadBtn.style.borderRadius = '5px';
-            downloadBtn.style.textDecoration = 'none';
+            downloadBtn.className = 'download-button';
             resultDiv.appendChild(downloadBtn);
             
             // Add prompt used
             const promptDiv = document.createElement('div');
-            promptDiv.style.marginTop = '10px';
+            promptDiv.className = 'prompt-display';
             promptDiv.innerHTML = `<strong>Prompt used:</strong> ${item.prompt}`;
             resultDiv.appendChild(promptDiv);
             
             // Add "Generate New Image" button
             const newImageBtn = document.createElement('button');
             newImageBtn.innerHTML = 'Generate New Image';
-            newImageBtn.style.marginTop = '20px';
+            newImageBtn.className = 'new-image-button';
             newImageBtn.onclick = showInputForm;
             resultDiv.appendChild(newImageBtn);
             
@@ -448,15 +445,42 @@
                 // Hide history when showing the result
                 toggleHistoryVisibility(false);
                 
-                // Create image element
+                // Create image container for better control
+                const imageContainer = document.createElement('div');
+                imageContainer.className = 'result-image-container';
+                resultDiv.appendChild(imageContainer);
+                
+                // Create image element with controlled size
                 const img = document.createElement('img');
                 img.src = `data:image/png;base64,${imageBase64}`;
-                img.style.maxWidth = '100%';
-                img.style.borderRadius = '8px';
-                img.style.boxShadow = '0 4px 8px rgba(0, 0, 0, 0.1)';
-                resultDiv.appendChild(img);
+                img.className = 'result-image';
+                imageContainer.appendChild(img);
                 
-                // Rest of the function...
+                // Add download button
+                const downloadBtn = document.createElement('a');
+                downloadBtn.innerHTML = 'Download Image';
+                downloadBtn.href = img.src;
+                downloadBtn.download = 'generated-image.png';
+                downloadBtn.className = 'download-button';
+                resultDiv.appendChild(downloadBtn);
+                
+                // Add prompt used
+                const promptDiv = document.createElement('div');
+                promptDiv.className = 'prompt-display';
+                promptDiv.innerHTML = `<strong>Prompt used:</strong> ${prompt}`;
+                resultDiv.appendChild(promptDiv);
+                
+                // Add "Generate New Image" button
+                const newImageBtn = document.createElement('button');
+                newImageBtn.innerHTML = 'Generate New Image';
+                newImageBtn.className = 'new-image-button';
+                newImageBtn.onclick = showInputForm;
+                resultDiv.appendChild(newImageBtn);
+                
+                // Hide input form, show result
+                document.querySelector('.container').style.display = 'none';
+                document.getElementById('loading').style.display = 'none';
+                resultDiv.style.display = 'block';
             } else {
                 console.error("No image data found in response:", statusData);
                 document.getElementById('result').innerHTML = `
