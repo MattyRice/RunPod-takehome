@@ -61,6 +61,11 @@
     
     <div id="history" class="history-section"></div>
     
+    <div id="scrollIndicator" class="scroll-indicator">
+        <div class="scroll-text">Scroll to see previously generated images</div>
+        <div class="scroll-arrow">↓</div>
+    </div>
+    
     <script>
         
         // Add this array of quirky messages at the top of your script section
@@ -112,6 +117,37 @@
             if (showAdvanced) {
                 toggleAdvancedOptions();
             }
+            
+            // Set up scroll indicator
+            const scrollIndicator = document.getElementById('scrollIndicator');
+            
+            // Show indicator only if there are history items
+            if (sessionHistory.length > 0) {
+                scrollIndicator.classList.remove('hidden');
+            } else {
+                scrollIndicator.classList.add('hidden');
+            }
+            
+            // Hide indicator when clicked
+            scrollIndicator.addEventListener('click', () => {
+                window.scrollTo({
+                    top: document.getElementById('history').offsetTop,
+                    behavior: 'smooth'
+                });
+            });
+            
+            // Handle scroll events
+            window.addEventListener('scroll', () => {
+                // If scrolled down more than 200px, hide the indicator
+                if (window.scrollY > 200) {
+                    scrollIndicator.classList.add('hidden');
+                } else {
+                    // Only show if there are history items
+                    if (sessionHistory.length > 0) {
+                        scrollIndicator.classList.remove('hidden');
+                    }
+                }
+            });
         });
 
         // Add this function to save an image to history
@@ -223,6 +259,14 @@
             
             historyHTML += '</div>';
             historyDiv.innerHTML = historyHTML;
+            
+            // After updating the history section, update the scroll indicator
+            const scrollIndicator = document.getElementById('scrollIndicator');
+            if (sessionHistory.length > 0) {
+                scrollIndicator.classList.remove('hidden');
+            } else {
+                scrollIndicator.classList.add('hidden');
+            }
         }
 
         // Add a function to clear all history
