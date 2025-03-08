@@ -521,7 +521,7 @@
                 
                 if (data.id) {
                     document.getElementById('status').textContent = 'Request submitted, waiting for processing...';
-                    checkStatus(data.id, RUNPOD_ENDPOINT_ID);
+                    checkStatus(data.id);
                 } else {
                     throw new Error('No request ID returned');
                 }
@@ -534,13 +534,12 @@
             }
         }
         
-        async function checkStatus(requestId, endpointId) {
+        async function checkStatus(requestId) {
             try {
-                const statusResponse = await fetch(`https://api.runpod.ai/v2/${endpointId}/status/${requestId}`, {
+                const statusResponse = await fetch(`/api/status?id=${requestId}`, {
                     method: 'GET',
                     headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${RUNPOD_API_KEY}`
+                        'Content-Type': 'application/json'
                     }
                 });
                 
@@ -552,7 +551,7 @@
                 
                 if (statusData.status === "IN_QUEUE" || statusData.status === "IN_PROGRESS") {
                     // Check again after 2 seconds
-                    setTimeout(() => checkStatus(requestId, endpointId), 2000);
+                    setTimeout(() => checkStatus(requestId), 2000);
                 } else if (statusData.status === "COMPLETED") {
                     // Display the result
                     displayResult(statusData);
