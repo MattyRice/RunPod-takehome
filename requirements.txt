@@ -1,4 +1,9 @@
-runpod
-transformers
-torch
-pillow 
+torch>=2.0.0
+transformers>=4.30.0
+Pillow>=9.0.0
+runpod>=1.2.0
+diffusers
+accelerate
+huggingface_hub
+protobuf
+sentencepiece 

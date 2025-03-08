@@ -1,46 +1,87 @@
-import runpod
+import os
 import torch
-from transformers import FluxForConditionalGeneration, AutoTokenizer
-from PIL import Image
-import io
+from diffusers import FluxPipeline
 import base64
+from io import BytesIO
+from PIL import Image
+import runpod
+from huggingface_hub import login
 
-# Load the model and tokenizer
-model = FluxForConditionalGeneration.from_pretrained("black-forest-labs/FLUX.1-dev")
-tokenizer = AutoTokenizer.from_pretrained("black-forest-labs/FLUX.1-dev")
+# Login to Hugging Face
+hf_token = os.environ.get("HF_TOKEN")
+if hf_token:
+    login(token=hf_token)
+    print("Logged in to Hugging Face")
+else:
+    print("WARNING: No Hugging Face token provided")
 
-def generate_image(prompt):
-    # Tokenize the input prompt
-    inputs = tokenizer(prompt, return_tensors="pt")
-    
-    # Generate image
-    with torch.no_grad():
-        image = model.generate(**inputs, num_inference_steps=50)[0]
-    
-    # Convert image to PIL Image
-    pil_image = Image.fromarray(image.numpy())
-    
-    # Convert image to base64 for easy transmission
-    buffered = io.BytesIO()
-    pil_image.save(buffered, format="PNG")
-    img_str = base64.b64encode(buffered.getvalue()).decode()
-    
-    return img_str
+# Global variables to load the model just once when the container starts
+model = None
+
+def init():
+    global model
+    print("Loading FLUX.1-dev model...")
+    model = FluxPipeline.from_pretrained(
+        "black-forest-labs/FLUX.1-dev", 
+        torch_dtype=torch.float16,
+        use_auth_token=hf_token
+    ).to("cuda")
+    print("Model loaded successfully")
 
 def handler(event):
+    global model
+    
+    # Initialize model if not already loaded
+    if model is None:
+        init()
+    
+    # Extract prompt from the event
+    prompt = event.get("input", {}).get("prompt", "")
+    if not prompt:
+        return {"error": "No prompt provided"}
+    
+    # Set optional parameters with defaults
+    num_inference_steps = event.get("input", {}).get("num_inference_steps", 50)
+    guidance_scale = event.get("input", {}).get("guidance_scale", 7.5)
+    seed = event.get("input", {}).get("seed", None)
+    
+    # Set random seed if provided
+    generator = None
+    if seed is not None:
+        generator = torch.Generator(device="cuda").manual_seed(seed)
+    
+    # Generate image
     try:
-        prompt = event.get('input', {}).get('prompt')
-        if not prompt:
-            return {"error": "No prompt provided"}
+        print(f"Generating image with prompt: {prompt}")
+        with torch.inference_mode():
+            image = model(
+                prompt=prompt,
+                num_inference_steps=num_inference_steps,
+                guidance_scale=guidance_scale,
+                generator=generator
+            ).images[0]
         
-        generated_image = generate_image(prompt)
+        # Convert image to base64 string
+        buffered = BytesIO()
+        image.save(buffered, format="PNG")
+        image_base64 = base64.b64encode(buffered.getvalue()).decode("utf-8")
         
         return {
-            "image": generated_image,
-            "prompt": prompt
+            "status": "success",
+            "output": {
+                "image_base64": image_base64,
+                "prompt": prompt
+            }
         }
     except Exception as e:
-        return {"error": str(e)}
+        print(f"Error generating image: {str(e)}")
+        return {
+            "status": "error",
+            "error": str(e)
+        }
 
-# RunPod requires this to start the serverless endpoint
+# Initialize the model when the container starts
+init()
+
+# Start the runpod handler
 runpod.serverless.start({"handler": handler})
