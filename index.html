@@ -16,19 +16,35 @@
             <textarea id="prompt" rows="4" placeholder="A cat holding a sign that says hello world"></textarea>
         </div>
         
-        <div class="form-group">
-            <label for="steps">Inference Steps (10-100):</label>
-            <input type="number" id="steps" min="10" max="100" value="50">
+        <div class="advanced-toggle">
+            <button id="advancedToggleBtn" onclick="toggleAdvancedOptions()">
+                <span id="toggleIcon">▶</span> Show Advanced Options
+            </button>
         </div>
         
-        <div class="form-group">
-            <label for="guidance">Guidance Scale (1-20):</label>
-            <input type="number" id="guidance" min="1" max="20" step="0.5" value="7.5">
-        </div>
-        
-        <div class="form-group">
-            <label for="seed">Seed (optional):</label>
-            <input type="number" id="seed" placeholder="Leave blank for random seed">
+        <div id="advancedOptions" class="advanced-options">
+            <div class="form-group">
+                <label for="steps" class="tooltip-container">
+                    Inference Steps (10-100):
+                    <span class="tooltip-icon">?</span>
+                    <span class="tooltip">Controls how many steps the AI takes to refine the image. Higher values (40-100) produce more detailed results but take longer. Lower values (10-30) are faster but may have less detail.</span>
+                </label>
+                <input type="number" id="steps" min="10" max="100" value="50">
+            </div>
+            
+            <div class="form-group">
+                <label for="guidance" class="tooltip-container">
+                    Guidance Scale (1-20):
+                    <span class="tooltip-icon">?</span>
+                    <span class="tooltip">Controls how closely the image follows your prompt. Higher values (7-15) make the AI follow your text more strictly. Lower values (1-5) allow more creative freedom but may be less accurate to your prompt.</span>
+                </label>
+                <input type="number" id="guidance" min="1" max="20" step="0.5" value="7.5">
+            </div>
+            
+            <div class="form-group">
+                <label for="seed">Seed (optional):</label>
+                <input type="number" id="seed" placeholder="Leave blank for random seed">
+            </div>
         </div>
         
         <button id="generateBtn" onclick="generateImage()">Generate Image</button>
@@ -87,6 +103,12 @@
             if (savedHistory) {
                 sessionHistory = JSON.parse(savedHistory);
                 updateHistorySection();
+            }
+            
+            // Check if advanced options were previously shown
+            const showAdvanced = localStorage.getItem('showAdvancedOptions') === 'true';
+            if (showAdvanced) {
+                toggleAdvancedOptions();
             }
         });
 
@@ -352,198 +374,25 @@
                 resetUI();
             }
         }
-        
-        async function checkStatus(requestId) {
-            try {
-                const statusResponse = await fetch(`/api/status?id=${requestId}`, {
-                    method: 'GET',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    }
-                });
-                
-                if (!statusResponse.ok) {
-                    throw new Error(`HTTP error! Status: ${statusResponse.status}`);
-                }
-                
-                const statusData = await statusResponse.json();
-                
-                if (statusData.status === "IN_QUEUE" || statusData.status === "IN_PROGRESS") {
-                    // Check again after 2 seconds
-                    setTimeout(() => checkStatus(requestId), 2000);
-                } else if (statusData.status === "COMPLETED") {
-                    // Display the result
-                    displayResult(statusData);
-                } else {
-                    // Handle error
-                    document.getElementById('result').innerHTML = `
-                        <h3>Error:</h3>
-                        <pre>${JSON.stringify(statusData, null, 2)}</pre>
-                    `;
-                    resetUI();
-                }
-            } catch (error) {
-                document.getElementById('result').innerHTML = `
-                    <h3>Error checking status:</h3>
-                    <p>${error.message}</p>
-                `;
-                resetUI();
-            }
-        }
-        
-        function displayResult(statusData) {
-            // Clear message intervals when result is displayed
-            if (messageInterval) clearInterval(messageInterval);
-            if (longWaitTimeout) clearTimeout(longWaitTimeout);
-            
-            document.getElementById('generateBtn').disabled = false;
-            document.getElementById('loading').style.display = 'none';
-            
-            const resultDiv = document.getElementById('result');
-            resultDiv.innerHTML = '';
-            
-            // Check for the nested structure: output.output.image_base64
-            if (statusData.status === "COMPLETED" && 
-                statusData.output && 
-                statusData.output.output && 
-                statusData.output.output.image_base64) {
-                
-                const imageBase64 = statusData.output.output.image_base64;
-                const prompt = statusData.output.output.prompt || document.getElementById('prompt').value;
-                
-                // Save to history
-                saveToHistory(imageBase64, prompt);
-                
-                // Hide history when showing the result
-                toggleHistoryVisibility(false);
-                
-                // Create image element
-                const img = document.createElement('img');
-                img.src = `data:image/png;base64,${imageBase64}`;
-                img.style.maxWidth = '100%';
-                img.style.borderRadius = '8px';
-                img.style.boxShadow = '0 4px 8px rgba(0, 0, 0, 0.1)';
-                resultDiv.appendChild(img);
-                
-                // Add download button
-                const downloadBtn = document.createElement('a');
-                downloadBtn.innerHTML = 'Download Image';
-                downloadBtn.href = img.src;
-                downloadBtn.download = 'generated-image.png';
-                downloadBtn.style.display = 'inline-block';
-                downloadBtn.style.marginTop = '15px';
-                downloadBtn.style.padding = '10px 15px';
-                downloadBtn.style.backgroundColor = '#4CAF50';
-                downloadBtn.style.color = 'white';
-                downloadBtn.style.borderRadius = '5px';
-                downloadBtn.style.textDecoration = 'none';
-                resultDiv.appendChild(downloadBtn);
-                
-                // Add prompt used if available
-                if (prompt) {
-                    const promptDiv = document.createElement('div');
-                    promptDiv.style.marginTop = '10px';
-                    promptDiv.innerHTML = `<strong>Prompt used:</strong> ${prompt}`;
-                    resultDiv.appendChild(promptDiv);
-                }
-                
-                // Add "Generate New Image" button
-                const newImageBtn = document.createElement('button');
-                newImageBtn.innerHTML = 'Generate New Image';
-                newImageBtn.style.marginTop = '20px';
-                newImageBtn.onclick = showInputForm;
-                resultDiv.appendChild(newImageBtn);
-                
-            } else {
-                document.getElementById('result').innerHTML = `
-                    <h3>Error:</h3>
-                    <p>No image data found in the response</p>
-                    <pre>${JSON.stringify(statusData, null, 2)}</pre>
-                `;
-                // Show the form again on error
-                document.querySelector('.container').style.display = 'flex';
-                // Show history on error
-                toggleHistoryVisibility(true);
-            }
-        }
-        
-        function resetUI() {
-            // Clear message intervals when UI is reset
-            if (messageInterval) clearInterval(messageInterval);
-            if (longWaitTimeout) clearTimeout(longWaitTimeout);
-            
-            // Show the form again and history
-            document.querySelector('.container').style.display = 'flex';
-            toggleHistoryVisibility(true);
-            document.getElementById('generateBtn').disabled = false;
-            document.getElementById('loading').style.display = 'none';
-            document.getElementById('status').textContent = 'Submitting request...';
-        }
 
-        function startQuirkyMessages() {
-            // Clear any existing intervals
-            if (messageInterval) clearInterval(messageInterval);
-            if (longWaitTimeout) clearTimeout(longWaitTimeout);
+        // Add this function to toggle advanced options
+        function toggleAdvancedOptions() {
+            const advancedOptions = document.getElementById('advancedOptions');
+            const toggleIcon = document.getElementById('toggleIcon');
+            const toggleBtn = document.getElementById('advancedToggleBtn');
             
-            const statusElement = document.getElementById('status');
-            
-            // Show first message immediately
-            statusElement.textContent = loadingMessages[0];
-            statusElement.style.animation = 'none';
-            void statusElement.offsetWidth; // Trigger reflow
-            statusElement.style.animation = 'fadeInOut 4s ease-in-out';
-            
-            messageIndex = 1;
-            
-            // Change message every 4 seconds with fade animation
-            messageInterval = setInterval(() => {
-                // Reset animation
-                statusElement.style.animation = 'none';
-                void statusElement.offsetWidth; // Trigger reflow
-                statusElement.style.animation = 'fadeInOut 4s ease-in-out';
-                
-                // Update message
-                if (messageIndex < loadingMessages.length) {
-                    statusElement.textContent = loadingMessages[messageIndex];
-                    messageIndex++;
-                } else {
-                    // Start cycling through messages again
-                    messageIndex = 0;
-                    statusElement.textContent = loadingMessages[messageIndex];
-                    messageIndex++;
-                }
-            }, 4000);
-            
-            // After 20 seconds, start showing "taking longer than usual" messages
-            longWaitTimeout = setTimeout(() => {
-                clearInterval(messageInterval);
-                
-                // Show first long wait message
-                statusElement.textContent = longWaitMessages[0];
-                statusElement.style.animation = 'none';
-                void statusElement.offsetWidth; // Trigger reflow
-                statusElement.style.animation = 'fadeInOut 6s ease-in-out';
-                
-                let longWaitIndex = 1;
-                
-                // Cycle through long wait messages
-                messageInterval = setInterval(() => {
-                    // Reset animation
-                    statusElement.style.animation = 'none';
-                    void statusElement.offsetWidth; // Trigger reflow
-                    statusElement.style.animation = 'fadeInOut 6s ease-in-out';
-                    
-                    if (longWaitIndex < longWaitMessages.length) {
-                        statusElement.textContent = longWaitMessages[longWaitIndex];
-                        longWaitIndex++;
-                    } else {
-                        longWaitIndex = 0;
-                        statusElement.textContent = longWaitMessages[longWaitIndex];
-                        longWaitIndex++;
-                    }
-                }, 6000);
-            }, 20000);
+            if (advancedOptions.classList.contains('show')) {
+                advancedOptions.classList.remove('show');
+                toggleIcon.textContent = '▶';
+                toggleBtn.innerHTML = `<span id="toggleIcon">▶</span> Show Advanced Options`;
+                localStorage.setItem('showAdvancedOptions', 'false');
+            } else {
+                advancedOptions.classList.add('show');
+                toggleIcon.textContent = '▼';
+                toggleBtn.innerHTML = `<span id="toggleIcon">▼</span> Hide Advanced Options`;
+                localStorage.setItem('showAdvancedOptions', 'true');
+            }
         }
     </script>
 </body>
-</html> 
+</html>
