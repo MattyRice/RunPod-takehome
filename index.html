@@ -377,6 +377,100 @@
             }
         }
 
+        async function checkStatus(requestId) {
+            try {
+                console.log("Checking status for request:", requestId);
+                const statusResponse = await fetch(`/api/status?id=${requestId}`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (!statusResponse.ok) {
+                    throw new Error(`HTTP error! Status: ${statusResponse.status}`);
+                }
+                
+                const statusData = await statusResponse.json();
+                console.log("Status data:", statusData);
+                
+                if (statusData.status === "IN_QUEUE" || statusData.status === "IN_PROGRESS") {
+                    // Check again after 2 seconds
+                    setTimeout(() => checkStatus(requestId), 2000);
+                } else if (statusData.status === "COMPLETED") {
+                    // Display the result
+                    console.log("Request completed, displaying result");
+                    displayResult(statusData);
+                } else {
+                    // Handle error
+                    console.error("Error status received:", statusData);
+                    document.getElementById('result').innerHTML = `
+                        <h3>Error:</h3>
+                        <pre>${JSON.stringify(statusData, null, 2)}</pre>
+                    `;
+                    resetUI();
+                }
+            } catch (error) {
+                console.error("Error checking status:", error);
+                document.getElementById('result').innerHTML = `
+                    <h3>Error checking status:</h3>
+                    <p>${error.message}</p>
+                `;
+                resetUI();
+            }
+        }
+
+        function displayResult(statusData) {
+            console.log("Displaying result:", statusData);
+            
+            // Clear message intervals when result is displayed
+            if (messageInterval) clearInterval(messageInterval);
+            if (longWaitTimeout) clearTimeout(longWaitTimeout);
+            
+            document.getElementById('generateBtn').disabled = false;
+            document.getElementById('loading').style.display = 'none';
+            
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = '';
+            
+            // Check for the nested structure: output.output.image_base64
+            if (statusData.status === "COMPLETED" && 
+                statusData.output && 
+                statusData.output.output && 
+                statusData.output.output.image_base64) {
+                
+                const imageBase64 = statusData.output.output.image_base64;
+                const prompt = statusData.output.output.prompt || document.getElementById('prompt').value;
+                
+                // Save to history
+                saveToHistory(imageBase64, prompt);
+                
+                // Hide history when showing the result
+                toggleHistoryVisibility(false);
+                
+                // Create image element
+                const img = document.createElement('img');
+                img.src = `data:image/png;base64,${imageBase64}`;
+                img.style.maxWidth = '100%';
+                img.style.borderRadius = '8px';
+                img.style.boxShadow = '0 4px 8px rgba(0, 0, 0, 0.1)';
+                resultDiv.appendChild(img);
+                
+                // Rest of the function...
+            } else {
+                console.error("No image data found in response:", statusData);
+                document.getElementById('result').innerHTML = `
+                    <h3>Error:</h3>
+                    <p>No image data found in the response</p>
+                    <pre>${JSON.stringify(statusData, null, 2)}</pre>
+                `;
+                // Show the form again on error
+                document.querySelector('.container').style.display = 'flex';
+                // Show history on error
+                toggleHistoryVisibility(true);
+            }
+        }
+
         // Add this function to toggle advanced options
         function toggleAdvancedOptions() {
             const advancedOptions = document.getElementById('advancedOptions');
@@ -394,6 +488,18 @@
                 toggleBtn.innerHTML = `<span id="toggleIcon">▼</span> Hide Advanced Options`;
                 localStorage.setItem('showAdvancedOptions', 'true');
             }
+        }
+
+        function resetUI() {
+            // Clear message intervals when UI is reset
+            if (messageInterval) clearInterval(messageInterval);
+            if (longWaitTimeout) clearTimeout(longWaitTimeout);
+            
+            // Show the form again and history
+            document.querySelector('.container').style.display = 'flex';
+            toggleHistoryVisibility(true);
+            document.getElementById('generateBtn').disabled = false;
+            document.getElementById('loading').style.display = 'none';
         }
     </script>
 </body>
