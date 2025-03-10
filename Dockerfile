@@ -1,4 +1,4 @@
-FROM pytorch/pytorch:2.1.0-cuda11.8-cudnn8-runtime
+FROM python:3.9-slim
 
 # Set working directory
 WORKDIR /app
@@ -13,15 +13,14 @@ RUN apt-get update && apt-get install -y \
 COPY requirements.txt .
 
 # Install Python dependencies and clean cache in the same layer
-RUN pip install -r requirements.txt && \
-    pip cache purge
-
-# Set Hugging Face token as environment variable
-# Replace YOUR_HF_TOKEN with your actual token
-ENV HF_TOKEN="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"
+RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy the handler script
-COPY handler.py .
+COPY . .
+
+# Use ARG for build-time variables
+ARG HF_TOKEN
+ENV HF_TOKEN=${HF_TOKEN}
 
 # Set the entrypoint
 CMD ["python", "handler.py"] 

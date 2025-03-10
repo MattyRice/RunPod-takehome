@@ -7,8 +7,10 @@ from PIL import Image
 import runpod
 from huggingface_hub import login
 
-# Login to Hugging Face
+# Get token from environment variable
 hf_token = os.environ.get("HF_TOKEN")
+
+# Login to Hugging Face
 if hf_token:
     login(token=hf_token)
     print("Logged in to Hugging Face")
